@@ -1,0 +1,71 @@
+version: '3.7'
+networks:
+ inception:
+  name: inception
+volumes:
+ wp:
+  name: wordpress-volume
+  driver_opts:
+   type: none
+   o: bind
+   device: ${WP_VOLUME}
+ db:
+  name: mariadb-volume
+  driver_opts:
+   type: none
+   o: bind
+   device: ${DB_VOLUME}
+services:
+ mariadb:
+  container_name: mariadb
+  networks:
+   - inception
+  env_file: .env
+  build:
+   context: requirements/mariadb
+   args:
+    - DB_PASS
+    - DB_USER
+    - DB_NAME
+    - RT_PASS
+  volumes:
+   - db:/var/lib/mariadb
+ wordpress:
+  container_name: wordpress
+  depends_on:
+   - mariadb
+  networks:
+   - inception
+  env_file: .env 
+  build:
+   context: requirements/wordpress
+   args:
+    - DB_NAME
+    - DB_USER
+    - DB_PASS
+    - DOMAIN_NAME
+    - AD_NAME
+    - AD_PASS
+    - AD_EMAIL
+    - TITLE
+    - US_NAME
+    - US_EMAIL
+    - ROLE
+    - US_PASS
+  volumes:
+   - wp:/var/www/wordpress
+ nginx:
+  container_name: nginx
+  depends_on:
+   - wordpress
+  networks:
+   - inception
+  ports:
+   - 443:443
+  volumes:
+   - wp:/var/www/wordpress
+  env_file: .env
+  build:
+   context: requirements/nginx
+   args:
+    - DOMAIN_NAME
